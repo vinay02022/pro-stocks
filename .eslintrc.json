@@ -6,7 +6,7 @@
       "warn",
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
     ],
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-console": "off",
     "eqeqeq": ["error", "always"],
     "curly": ["error", "all"],
     "no-var": "error"
