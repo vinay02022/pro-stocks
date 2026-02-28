@@ -571,13 +571,13 @@ export default function FullScreenChart({
           mode: LightweightCharts.CrosshairMode.Normal,
           vertLine: {
             color: themeColors.crosshair,
-            width: 1,
+            width: 1 as const,
             style: 2,
             labelBackgroundColor: '#2962ff',
           },
           horzLine: {
             color: themeColors.crosshair,
-            width: 1,
+            width: 1 as const,
             style: 2,
             labelBackgroundColor: '#2962ff',
           },
@@ -674,7 +674,7 @@ export default function FullScreenChart({
         candleSeries.createPriceLine({
           price: line.price,
           color: line.color,
-          lineWidth: line.width,
+          lineWidth: line.width as 1 | 2 | 3 | 4,
           lineStyle: getLineStyle(line.style),
           axisLabelVisible: true,
         });

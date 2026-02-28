@@ -313,13 +313,6 @@ function TradeResult({ data }: { data: TradeSuggestion }) {
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[#2a2e39]">
-                <span className="text-gray-400">Entry Zone</span>
-                <span className="font-semibold text-white">
-                  Rs.{idea.suggested_entry.entry_zone?.low.toFixed(2)} - Rs.
-                  {idea.suggested_entry.entry_zone?.high.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2">
                 <span className="text-gray-400">Entry Type</span>
                 <span className="font-semibold text-white">
                   {idea.suggested_entry.entry_type}

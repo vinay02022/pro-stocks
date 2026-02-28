@@ -572,13 +572,13 @@ export default function AdvancedChart({
             mode: LightweightCharts.CrosshairMode.Normal,
             vertLine: {
               color: '#758696',
-              width: 1,
+              width: 1 as const,
               style: LightweightCharts.LineStyle.Dashed,
               labelBackgroundColor: '#2962ff',
             },
             horzLine: {
               color: '#758696',
-              width: 1,
+              width: 1 as const,
               style: LightweightCharts.LineStyle.Dashed,
               labelBackgroundColor: '#2962ff',
             },
@@ -655,7 +655,7 @@ export default function AdvancedChart({
           const priceLine = candleSeries.createPriceLine({
             price: line.price,
             color: line.color,
-            lineWidth: line.width,
+            lineWidth: line.width as 1 | 2 | 3 | 4,
             lineStyle: getLineStyle(line.style),
             axisLabelVisible: true,
             title: '',
