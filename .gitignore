@@ -1,0 +1,134 @@
+# =============================================================================
+# DEPENDENCIES
+# =============================================================================
+node_modules/
+.pnp/
+.pnp.js
+
+# =============================================================================
+# NEXT.JS
+# =============================================================================
+.next/
+out/
+build/
+
+# =============================================================================
+# PYTHON
+# =============================================================================
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+backend/.Python
+backend/venv/
+backend/.venv/
+backend/env/
+backend/ENV/
+backend/*.egg-info/
+backend/*.egg
+backend/dist/
+backend/build/
+backend/.eggs/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.tox/
+backend/.nox/
+
+# =============================================================================
+# ENVIRONMENT FILES (SECRETS - NEVER COMMIT)
+# =============================================================================
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+
+# =============================================================================
+# IDE / EDITOR
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# =============================================================================
+# OS FILES
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# =============================================================================
+# LOGS
+# =============================================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+logs/
+
+# =============================================================================
+# TESTING
+# =============================================================================
+coverage/
+.nyc_output/
+*.lcov
+.coverage
+htmlcov/
+
+# =============================================================================
+# BUILD ARTIFACTS
+# =============================================================================
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# =============================================================================
+# DATABASE
+# =============================================================================
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# MISC
+# =============================================================================
+.cache/
+.temp/
+.tmp/
+*.bak
+*.backup
+*.old
+
+# Package lock files (keep package-lock.json, ignore others)
+yarn.lock
+pnpm-lock.yaml
+
+# Husky
+.husky/_/
+
+# Claude
+.claude/
+
+# Temp files
+nul
+temp_*.json
