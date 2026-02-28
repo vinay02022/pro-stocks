@@ -30,7 +30,7 @@ export default function Recommendations() {
     const fetchMovers = async () => {
       try {
         const res = await fetch(
-          'http://localhost:8000/api/v1/market/movers?count=8'
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/market/movers?count=8`
         );
         if (!res.ok) {
           throw new Error('Failed to fetch market data');
@@ -74,7 +74,7 @@ export default function Recommendations() {
         <div className="text-center py-8">
           <p className="text-red-500 mb-4">{error}</p>
           <p className="text-gray-500 dark:text-gray-400">
-            Make sure the backend server is running at localhost:8000
+            Make sure the backend server is running
           </p>
         </div>
       </div>

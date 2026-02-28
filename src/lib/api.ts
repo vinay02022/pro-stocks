@@ -2,7 +2,8 @@
  * API Client for StockPro Backend
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export interface AnalyzeRequest {
   symbol: string;
@@ -81,7 +82,7 @@ export interface TradeSuggestion {
 export async function analyzeSymbol(
   request: AnalyzeRequest
 ): Promise<TradeSuggestion> {
-  const response = await fetch(`${API_BASE}/api/v1/strategy/analyze`, {
+  const response = await fetch(`${API_BASE}/strategy/analyze`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -104,7 +105,7 @@ export async function analyzeSymbol(
 
 export async function checkHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE}/health`);
+    const response = await fetch(`${API_BASE.replace('/api/v1', '')}/health`);
     return response.ok;
   } catch {
     return false;

@@ -57,7 +57,7 @@ export default function StockChart({
 
       try {
         const res = await fetch(
-          `http://localhost:8000/api/v1/market/ohlcv/${symbol}?timeframe=${timeframe}&lookback=100`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/market/ohlcv/${symbol}?timeframe=${timeframe}&lookback=100`
         );
         if (!res.ok) {
           throw new Error('Failed to fetch chart data');

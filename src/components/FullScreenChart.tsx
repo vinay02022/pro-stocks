@@ -226,7 +226,7 @@ export default function FullScreenChart({
       const cacheKey = `${symbol}-${tf}-${tfLookback}`;
       if (!dataCacheRef.current.has(cacheKey)) {
         fetch(
-          `http://localhost:8000/api/v1/indicators/${symbol}/chart-data?timeframe=${tf}&lookback=${tfLookback}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/indicators/${symbol}/chart-data?timeframe=${tf}&lookback=${tfLookback}`
         )
           .then((res) => (res.ok ? res.json() : null))
           .then((data) => {
@@ -272,7 +272,7 @@ export default function FullScreenChart({
 
         // Still fetch fresh data in background
         fetch(
-          `http://localhost:8000/api/v1/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
         )
           .then((res) => (res.ok ? res.json() : null))
           .then((freshData) => {
@@ -288,7 +288,7 @@ export default function FullScreenChart({
       setIsLoading(true);
       try {
         const res = await fetch(
-          `http://localhost:8000/api/v1/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
         );
         if (!res.ok) {
           throw new Error('Failed to fetch');
@@ -339,7 +339,7 @@ export default function FullScreenChart({
 
     // Use Server-Sent Events for real-time updates
     const eventSource = new EventSource(
-      `http://localhost:8000/api/v1/stream/price/${symbol}?interval=100`
+      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/stream/price/${symbol}?interval=100`
     );
 
     eventSource.onmessage = (event) => {

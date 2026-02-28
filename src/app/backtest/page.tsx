@@ -99,21 +99,24 @@ export default function BacktestPage() {
         {}
       );
 
-      const res = await fetch('http://localhost:8000/api/v1/backtest/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol: symbol.toUpperCase(),
-          strategy,
-          strategy_params: strategyParams,
-          timeframe,
-          initial_capital: capital,
-          position_size_percent: 100,
-          stop_loss_enabled: true,
-          take_profit_enabled: true,
-          lookback,
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/backtest/run`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: symbol.toUpperCase(),
+            strategy,
+            strategy_params: strategyParams,
+            timeframe,
+            initial_capital: capital,
+            position_size_percent: 100,
+            stop_loss_enabled: true,
+            take_profit_enabled: true,
+            lookback,
+          }),
+        }
+      );
 
       if (!res.ok) {
         throw new Error('Backtest failed');

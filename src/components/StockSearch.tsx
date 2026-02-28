@@ -35,7 +35,7 @@ export default function StockSearch({
       setIsLoading(true);
       try {
         const res = await fetch(
-          `http://localhost:8000/api/v1/market/search?q=${encodeURIComponent(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/market/search?q=${encodeURIComponent(
             query
           )}&limit=8`
         );

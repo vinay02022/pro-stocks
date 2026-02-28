@@ -78,7 +78,7 @@ export default function ScannerPage() {
       const patterns = selectedPatterns.includes('all')
         ? 'all'
         : selectedPatterns.join(',');
-      let url = `http://localhost:8000/api/v1/scanner/scan?patterns=${patterns}&timeframe=${timeframe}&min_score=${minScore}`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/scanner/scan?patterns=${patterns}&timeframe=${timeframe}&min_score=${minScore}`;
 
       if (signalFilter) {
         url += `&signal=${signalFilter}`;

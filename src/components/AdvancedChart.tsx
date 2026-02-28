@@ -235,7 +235,7 @@ export default function AdvancedChart({
       const cacheKey = `${symbol}-${tf}-${DEFAULT_LOOKBACK[tf as keyof typeof DEFAULT_LOOKBACK] || 300}`;
       if (!dataCacheRef.current.has(cacheKey)) {
         fetch(
-          `http://localhost:8000/api/v1/indicators/${symbol}/chart-data?timeframe=${tf}&lookback=${DEFAULT_LOOKBACK[tf as keyof typeof DEFAULT_LOOKBACK] || 300}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/indicators/${symbol}/chart-data?timeframe=${tf}&lookback=${DEFAULT_LOOKBACK[tf as keyof typeof DEFAULT_LOOKBACK] || 300}`
         )
           .then((res) => (res.ok ? res.json() : null))
           .then((data) => {
@@ -264,7 +264,7 @@ export default function AdvancedChart({
         setIsLoading(false);
         // Still fetch fresh data in background (silent refresh)
         fetch(
-          `http://localhost:8000/api/v1/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
         )
           .then((res) => (res.ok ? res.json() : null))
           .then((freshData) => {
@@ -283,7 +283,7 @@ export default function AdvancedChart({
 
       try {
         const res = await fetch(
-          `http://localhost:8000/api/v1/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/indicators/${symbol}/chart-data?timeframe=${timeframe}&lookback=${lookback}`
         );
         if (!res.ok) {
           throw new Error('Failed to fetch chart data');
@@ -319,7 +319,7 @@ export default function AdvancedChart({
 
     // Use Server-Sent Events for real-time updates
     const eventSource = new EventSource(
-      `http://localhost:8000/api/v1/stream/price/${symbol}?interval=100`
+      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/stream/price/${symbol}?interval=100`
     );
 
     eventSource.onmessage = (event) => {
