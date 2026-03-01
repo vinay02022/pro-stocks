@@ -5,7 +5,8 @@ All settings loaded from environment variables.
 """
 
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -33,7 +34,17 @@ class Settings(BaseSettings):
 
     # CORS (Frontend URL)
     frontend_url: str = "http://localhost:3000"
-    allowed_origins: list[str] = ["http://localhost:3000"]
+    allowed_origins: Union[list[str], str] = ["http://localhost:3000"]
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v: object) -> list[str]:
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            # Handle comma-separated or single URL
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return ["http://localhost:3000"]
 
     # Broker APIs
     groww_api_key: Optional[str] = None
