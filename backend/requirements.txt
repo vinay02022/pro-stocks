@@ -9,6 +9,7 @@ python-multipart>=0.0.6
 # Data Processing
 pandas>=2.2.0
 numpy>=1.26.0
+yfinance>=0.2.36
 # ta-lib>=0.4.28  # Requires separate installation of TA-Lib C library
 
 # Database
@@ -30,6 +31,7 @@ aiohttp>=3.9.0
 # LLM Clients
 anthropic>=0.18.0
 openai>=1.12.0
+google-generativeai>=0.4.0
 
 # Validation & Settings
 pydantic>=2.6.0
