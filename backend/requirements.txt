@@ -40,10 +40,13 @@ pydantic-settings>=2.1.0
 # Utilities
 python-dateutil>=2.8.0
 pytz>=2024.1
+requests>=2.31.0
+six>=1.16.0
 
 # Angel One SmartAPI (for real-time data)
 smartapi-python>=1.3.0
 pyotp>=2.8.0
+logzero>=1.7.0
 
 # Development (optional)
 pytest>=8.0.0
