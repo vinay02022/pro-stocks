@@ -81,6 +81,8 @@ cors_origins = [
     "http://localhost:3001",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
+    "https://stockpro-ai.vercel.app",
+    "https://stockpro-sigma.vercel.app",
 ]
 # Add any additional origins from settings
 if settings.allowed_origins:
