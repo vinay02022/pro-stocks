@@ -1,12 +1,31 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import StockSearch from '@/components/StockSearch';
 import AdvancedChart from '@/components/AdvancedChart';
 import NewsWidget from '@/components/NewsWidget';
+import TopNav from '@/components/TopNav';
 import { analyzeSymbol, TradeSuggestion } from '@/lib/api';
+import {
+  Brain,
+  Search,
+  Sparkles,
+  ShieldCheck,
+  ShieldAlert,
+  Target,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
+
+const LOADING_STEPS = [
+  { label: 'Fetching market data…', hint: 'Pulling latest candles' },
+  { label: 'Computing indicators…', hint: '15+ technical signals' },
+  { label: 'Reasoning with Gemini AI…', hint: 'Building trade thesis' },
+  { label: 'Validating risk gate…', hint: 'Position size & stop-loss' },
+  { label: 'Preparing your trade plan…', hint: 'Final assembly' },
+];
 
 function AnalyzeContent() {
   const searchParams = useSearchParams();
@@ -19,14 +38,16 @@ function AnalyzeContent() {
   const [result, setResult] = useState<TradeSuggestion | null>(null);
   const [showChart, setShowChart] = useState(!!symbolFromUrl);
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-analyze if symbol in URL on first load
   useEffect(() => {
     if (symbolFromUrl && !hasAnalyzed) {
       setSymbol(symbolFromUrl);
       setShowChart(true);
       runAnalysis(symbolFromUrl);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbolFromUrl, hasAnalyzed]);
 
   const runAnalysis = async (targetSymbol: string) => {
@@ -38,6 +59,14 @@ function AnalyzeContent() {
     setError(null);
     setResult(null);
     setHasAnalyzed(true);
+    setLoadingStep(0);
+
+    if (stepTimer.current) {
+      clearInterval(stepTimer.current);
+    }
+    stepTimer.current = setInterval(() => {
+      setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
+    }, 3500);
 
     try {
       const data = await analyzeSymbol({ symbol: targetSymbol.trim() });
@@ -45,6 +74,9 @@ function AnalyzeContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
+      if (stepTimer.current) {
+        clearInterval(stepTimer.current);
+      }
       setLoading(false);
     }
   };
@@ -56,350 +88,311 @@ function AnalyzeContent() {
     }
 
     setShowChart(true);
-
-    // Update URL
     router.push(`/analyze?symbol=${targetSymbol}`);
-
     await runAnalysis(targetSymbol);
   };
 
-  // Stock selection - only load chart, NO automatic analysis
   const handleStockSelect = (sym: string) => {
     setSymbol(sym);
     setShowChart(true);
-    setResult(null); // Clear previous results
-    // Update URL without triggering analysis
+    setResult(null);
     router.push(`/analyze?symbol=${sym}`, { scroll: false });
-    // DO NOT call handleAnalyze - user must click the button
   };
 
   return (
-    <main className="min-h-screen bg-[#0b0e11]">
-      {/* Header */}
-      <div className="bg-[#131722] border-b border-[#2a2e39]">
-        <div className="max-w-[1800px] mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <Link
-              href="/"
-              className="text-xl font-bold text-white hover:text-blue-400 transition-colors flex items-center gap-2"
-            >
-              <svg
-                className="w-8 h-8 text-blue-500"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                />
-              </svg>
-              StockPro
-            </Link>
-            <div className="flex-1 max-w-xl">
+    <>
+      <TopNav />
+      <main className="min-h-screen">
+        {/* Search bar */}
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 pt-6 pb-4">
+          <div className="glass rounded-2xl p-3 flex flex-wrap items-center gap-3 animate-fade-up">
+            <div className="flex-1 min-w-[240px]">
               <StockSearch
                 onSelect={handleStockSelect}
-                placeholder="Search stocks (e.g., TCS, RELIANCE, INFY)..."
+                placeholder="Search stocks — TCS, RELIANCE, INFY…"
               />
             </div>
             <button
               onClick={() => handleAnalyze()}
               disabled={loading || !symbol.trim()}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="btn-accent text-sm"
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Analyzing...
+                  <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
+                  Analyzing…
                 </>
               ) : (
                 <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                    />
-                  </svg>
+                  <Brain className="w-4 h-4" />
                   AI Analyze
                 </>
               )}
             </button>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-[1800px] mx-auto px-4 py-4">
-        {/* Error */}
-        {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg mb-4 flex items-center gap-3">
-            <svg
-              className="w-5 h-5 text-red-400 flex-shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 pb-12">
+          {/* Error */}
+          {error && (
+            <div className="rounded-2xl border border-spark-rose/25 bg-spark-rose/[0.06] p-4 mb-4 flex items-start gap-3 animate-fade-in">
+              <AlertTriangle className="w-5 h-5 text-spark-rose flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-spark-rose font-medium">{error}</p>
+                <p className="text-spark-rose/70 text-xs mt-1">
+                  The server may be waking up. Wait ~30 seconds and try again.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Chart + News */}
+          {showChart && symbol && (
+            <div
+              className="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-4 animate-fade-up"
+              style={{ animationDelay: '80ms' }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <p className="text-red-400">{error}</p>
-          </div>
-        )}
-
-        {/* Chart + News */}
-        {showChart && symbol && (
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-4">
-            <div className="xl:col-span-3">
-              <AdvancedChart symbol={symbol} />
+              <div className="xl:col-span-3">
+                <AdvancedChart symbol={symbol} />
+              </div>
+              <div className="xl:col-span-1">
+                <NewsWidget symbol={symbol} maxArticles={6} />
+              </div>
             </div>
-            <div className="xl:col-span-1">
-              <NewsWidget symbol={symbol} maxArticles={6} />
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Loading State */}
-        {loading && (
-          <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-8 text-center">
-            <div className="w-12 h-12 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-300 text-lg">
-              Running AI analysis for{' '}
-              <span className="text-white font-semibold">{symbol}</span>
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              Calculating indicators, generating trade idea, validating risk...
-            </p>
-          </div>
-        )}
+          {/* Loading state — progressive */}
+          {loading && (
+            <div className="glass rounded-2xl p-8 sm:p-10 animate-fade-in">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="relative w-12 h-12 flex-shrink-0">
+                  <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-spark-cyan border-r-spark-violet animate-spin" />
+                  <Sparkles className="absolute inset-0 m-auto w-4 h-4 text-spark-violet" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-bone-50 text-lg font-semibold">
+                    Running AI analysis for{' '}
+                    <span className="text-gradient-spark">{symbol}</span>
+                  </p>
+                  <p className="text-sm text-bone-400 mt-0.5">
+                    First request may take 30–60s as the server wakes up.
+                  </p>
+                </div>
+              </div>
 
-        {/* Results */}
-        {result && !loading && <TradeResult data={result} />}
+              <div className="space-y-2.5">
+                {LOADING_STEPS.map((s, i) => {
+                  const done = i < loadingStep;
+                  const active = i === loadingStep;
+                  return (
+                    <div
+                      key={s.label}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-500 ${
+                        active
+                          ? 'bg-spark-violet/10 border-spark-violet/25'
+                          : done
+                            ? 'bg-spark-emerald/[0.06] border-spark-emerald/15'
+                            : 'bg-white/[0.02] border-white/[0.05] opacity-60'
+                      }`}
+                    >
+                      <span className="flex-shrink-0">
+                        {done ? (
+                          <CheckCircle2 className="w-4 h-4 text-spark-emerald" />
+                        ) : active ? (
+                          <span className="block w-4 h-4 rounded-full border-2 border-spark-violet border-t-transparent animate-spin" />
+                        ) : (
+                          <span className="block w-4 h-4 rounded-full border-2 border-white/15" />
+                        )}
+                      </span>
+                      <div className="flex-1 flex items-center justify-between gap-3 min-w-0">
+                        <span
+                          className={`text-sm font-medium ${
+                            active
+                              ? 'text-bone-50'
+                              : done
+                                ? 'text-bone-200'
+                                : 'text-bone-400'
+                          }`}
+                        >
+                          {s.label}
+                        </span>
+                        <span className="text-xs text-bone-500 truncate">
+                          {s.hint}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-        {/* Empty State */}
-        {!symbol && !loading && !result && (
-          <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-12 text-center">
-            <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg
-                className="w-10 h-10 text-blue-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+          {/* Results */}
+          {result && !loading && <TradeResult data={result} />}
+
+          {/* Empty */}
+          {!symbol && !loading && !result && (
+            <div className="glass rounded-2xl p-12 text-center animate-fade-up">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-spark-violet/15 via-spark-cyan/15 to-spark-emerald/15 border border-white/[0.08] mb-5">
+                <Search className="w-7 h-7 text-spark-violet" />
+              </div>
+              <h2 className="text-2xl text-display font-semibold text-gradient mb-2">
+                Search for a stock to analyze
+              </h2>
+              <p className="text-bone-400 mb-6">
+                Try RELIANCE, TCS, INFY, or TATASTEEL.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {['TCS', 'RELIANCE', 'INFY', 'HDFC'].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleStockSelect(s)}
+                    className="btn-ghost text-xs"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">
-              Search for a stock to analyze
-            </h2>
-            <p className="text-gray-500">
-              Enter a stock symbol like RELIANCE, TCS, INFY, or TATASTEEL
-            </p>
-            <div className="flex items-center justify-center gap-2 mt-6">
-              {['TCS', 'RELIANCE', 'INFY', 'HDFC'].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => handleStockSelect(s)}
-                  className="px-4 py-2 bg-[#1e222d] text-gray-300 rounded-lg hover:bg-[#2a2e39] transition-colors text-sm"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <p className="text-gray-600 text-xs mt-4">
-              Click a stock to load chart, then click &ldquo;AI Analyze&rdquo;
-              to run analysis
-            </p>
-          </div>
-        )}
-      </div>
-    </main>
+          )}
+        </div>
+      </main>
+    </>
   );
 }
 
 function TradeResult({ data }: { data: TradeSuggestion }) {
   const { idea, risk_plan, explanation } = data;
   const isApproved = risk_plan.validation_status === 'APPROVED';
+  const dirColor =
+    idea.direction === 'LONG'
+      ? 'from-spark-emerald to-spark-cyan'
+      : idea.direction === 'SHORT'
+        ? 'from-spark-rose to-spark-amber'
+        : 'from-bone-400 to-bone-500';
 
   return (
-    <div className="space-y-4">
-      {/* Header Card */}
-      <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-5">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
+    <div className="space-y-4 animate-fade-up">
+      {/* Header card */}
+      <div className="glass rounded-2xl p-5 sm:p-6 relative overflow-hidden">
+        <span className="absolute top-4 right-4 dot-spark bg-spark-violet" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
             <span
-              className={`px-4 py-2 rounded-lg text-lg font-bold ${
-                idea.direction === 'LONG'
-                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                  : idea.direction === 'SHORT'
-                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-              }`}
+              className={`px-3.5 py-1.5 rounded-xl text-base font-bold text-ink-950 bg-gradient-to-r ${dirColor}`}
             >
               {idea.direction}
             </span>
-            <span className="text-2xl font-bold text-white">{idea.symbol}</span>
+            <span className="text-2xl font-display font-bold text-bone-50 tracking-tight">
+              {idea.symbol}
+            </span>
             <span
-              className={`px-3 py-1 rounded-lg text-sm font-medium ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold tracking-wider border ${
                 isApproved
-                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                  : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  ? 'bg-spark-emerald/10 text-spark-emerald border-spark-emerald/20'
+                  : 'bg-spark-rose/10 text-spark-rose border-spark-rose/20'
               }`}
             >
-              {risk_plan.validation_status}
+              {isApproved ? (
+                <span className="inline-flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />{' '}
+                  {risk_plan.validation_status}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3" />{' '}
+                  {risk_plan.validation_status}
+                </span>
+              )}
             </span>
           </div>
 
-          {/* Confidence Badge */}
           <div className="text-right">
-            <p className="text-sm text-gray-500">Confidence</p>
-            <p className="text-2xl font-bold text-blue-400">
+            <p className="text-xs uppercase tracking-[0.16em] text-bone-500">
+              Confidence
+            </p>
+            <p className="text-3xl font-display font-bold text-gradient-spark">
               {(idea.confidence_band.mid * 100).toFixed(0)}%
             </p>
-            <p className="text-xs text-gray-500">
-              Range: {(idea.confidence_band.low * 100).toFixed(0)}% -{' '}
+            <p className="text-[10px] text-bone-500 font-mono">
+              {(idea.confidence_band.low * 100).toFixed(0)}% –{' '}
               {(idea.confidence_band.high * 100).toFixed(0)}%
             </p>
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-[#2a2e39]">
-          <p className="text-gray-300">{explanation.summary}</p>
+        <div className="mt-5 pt-5 border-t border-white/[0.05]">
+          <p className="text-bone-200 leading-relaxed">{explanation.summary}</p>
         </div>
       </div>
 
-      {/* Entry & Risk Plan */}
+      {/* Entry & Risk */}
       {isApproved && risk_plan.approved_plan && (
         <div className="grid md:grid-cols-2 gap-4">
-          {/* Entry Plan */}
-          <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-5">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                />
-              </svg>
+          <div className="glass rounded-2xl p-5">
+            <h2 className="text-base font-semibold text-bone-50 mb-4 flex items-center gap-2">
+              <Target className="w-4 h-4 text-spark-cyan" />
               Entry Plan
             </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-[#2a2e39]">
-                <span className="text-gray-400">Entry Price</span>
-                <span className="font-semibold text-white">
-                  Rs.{idea.suggested_entry.entry_price?.toFixed(2) || 'Market'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#2a2e39]">
-                <span className="text-gray-400">Entry Type</span>
-                <span className="font-semibold text-white">
-                  {idea.suggested_entry.entry_type}
-                </span>
-              </div>
+            <div className="space-y-2.5">
+              <Row
+                label="Entry price"
+                value={`₹${idea.suggested_entry.entry_price?.toFixed(2) || 'Market'}`}
+              />
+              <Row label="Entry type" value={idea.suggested_entry.entry_type} />
             </div>
           </div>
 
-          {/* Risk Plan */}
-          <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-5">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-amber-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
+          <div className="glass rounded-2xl p-5">
+            <h2 className="text-base font-semibold text-bone-50 mb-4 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-spark-amber" />
               Risk Plan
             </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-[#2a2e39]">
-                <span className="text-gray-400">Position Size</span>
-                <span className="font-semibold text-white">
-                  {risk_plan.approved_plan.position_size} shares
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#2a2e39]">
-                <span className="text-gray-400">Stop Loss</span>
-                <span className="font-semibold text-red-400">
-                  Rs.{risk_plan.approved_plan.stop_loss.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#2a2e39]">
-                <span className="text-gray-400">Max Loss</span>
-                <span className="font-semibold text-red-400">
-                  Rs.{risk_plan.approved_plan.max_loss_amount.toLocaleString()}{' '}
-                  ({risk_plan.approved_plan.max_loss_percent}%)
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-gray-400">Risk:Reward</span>
-                <span className="font-semibold text-green-400">
-                  1:{risk_plan.approved_plan.risk_reward_ratio}
-                </span>
-              </div>
+            <div className="space-y-2.5">
+              <Row
+                label="Position size"
+                value={`${risk_plan.approved_plan.position_size} shares`}
+              />
+              <Row
+                label="Stop loss"
+                value={`₹${risk_plan.approved_plan.stop_loss.toFixed(2)}`}
+                valueClass="text-spark-rose"
+              />
+              <Row
+                label="Max loss"
+                value={`₹${risk_plan.approved_plan.max_loss_amount.toLocaleString()} (${risk_plan.approved_plan.max_loss_percent}%)`}
+                valueClass="text-spark-rose"
+              />
+              <Row
+                label="Risk : Reward"
+                value={`1 : ${risk_plan.approved_plan.risk_reward_ratio}`}
+                valueClass="text-spark-emerald"
+              />
             </div>
           </div>
         </div>
       )}
 
-      {/* Take Profit Targets */}
+      {/* Take-profit targets */}
       {isApproved && risk_plan.approved_plan?.take_profit && (
-        <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-5">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <svg
-              className="w-5 h-5 text-green-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+        <div className="glass rounded-2xl p-5">
+          <h2 className="text-base font-semibold text-bone-50 mb-4 flex items-center gap-2">
+            <Target className="w-4 h-4 text-spark-emerald" />
             Take Profit Targets
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {risk_plan.approved_plan.take_profit.map((tp, i) => (
               <div
                 key={i}
-                className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center"
+                className="rounded-xl p-4 text-center border border-spark-emerald/20 bg-spark-emerald/[0.06] relative overflow-hidden"
               >
-                <p className="text-sm text-green-400 mb-1">{tp.label}</p>
-                <p className="text-xl font-bold text-green-300">
-                  Rs.{tp.price.toFixed(2)}
+                <span className="absolute top-2 right-2 dot-spark bg-spark-emerald" />
+                <p className="text-xs text-spark-emerald/80 mb-1">{tp.label}</p>
+                <p className="text-xl font-display font-bold text-spark-emerald">
+                  ₹{tp.price.toFixed(2)}
                 </p>
-                <p className="text-xs text-green-400/70">
+                <p className="text-[10px] text-spark-emerald/60 mt-0.5">
                   Exit {tp.exit_percent}%
                 </p>
               </div>
@@ -408,74 +401,50 @@ function TradeResult({ data }: { data: TradeSuggestion }) {
         </div>
       )}
 
-      {/* Rejection Reasons */}
+      {/* Rejection */}
       {!isApproved &&
         risk_plan.rejection_reasons &&
         risk_plan.rejection_reasons.length > 0 && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-5">
-            <h2 className="text-lg font-semibold text-red-400 mb-4 flex items-center gap-2">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                />
-              </svg>
-              Why This Trade Was Rejected
+          <div className="rounded-2xl border border-spark-rose/25 bg-spark-rose/[0.06] p-5">
+            <h2 className="text-base font-semibold text-spark-rose mb-3 flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Why this trade was blocked
             </h2>
             <ul className="space-y-2">
               {risk_plan.rejection_reasons.map((r, i) => (
-                <li key={i} className="flex items-start gap-2 text-red-300">
-                  <span className="text-red-400 mt-0.5">×</span>
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-spark-rose/90 text-sm"
+                >
+                  <span className="text-spark-rose mt-0.5">×</span>
                   {r}
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-sm text-red-400/70">
-              The risk validation engine has blocked this trade to protect your
-              capital. Consider adjusting your portfolio settings or waiting for
-              a better setup.
+            <p className="mt-4 text-xs text-spark-rose/60">
+              The risk gate protects your capital. Adjust portfolio settings or
+              wait for a better setup.
             </p>
           </div>
         )}
 
       {/* Reasoning */}
-      <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-5">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <svg
-            className="w-5 h-5 text-purple-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-            />
-          </svg>
+      <div className="glass rounded-2xl p-5">
+        <h2 className="text-base font-semibold text-bone-50 mb-4 flex items-center gap-2">
+          <Brain className="w-4 h-4 text-spark-violet" />
           AI Reasoning
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <h3 className="font-medium text-green-400 mb-3 flex items-center gap-2 text-sm">
-              <span className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-xs">
-                ✓
-              </span>
-              Primary Factors
+            <h3 className="text-xs uppercase tracking-[0.18em] text-spark-emerald mb-3 flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Primary factors
             </h3>
             <ul className="space-y-2">
               {idea.reasoning.primary_factors.map((f, i) => (
                 <li
                   key={i}
-                  className="text-sm text-gray-300 pl-4 border-l-2 border-green-500/50"
+                  className="text-sm text-bone-200 pl-3 border-l-2 border-spark-emerald/40"
                 >
                   {f}
                 </li>
@@ -483,17 +452,15 @@ function TradeResult({ data }: { data: TradeSuggestion }) {
             </ul>
           </div>
           <div>
-            <h3 className="font-medium text-amber-400 mb-3 flex items-center gap-2 text-sm">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-xs">
-                !
-              </span>
+            <h3 className="text-xs uppercase tracking-[0.18em] text-spark-amber mb-3 flex items-center gap-2">
+              <AlertTriangle className="w-3.5 h-3.5" />
               Concerns
             </h3>
             <ul className="space-y-2">
               {idea.reasoning.concerns.map((c, i) => (
                 <li
                   key={i}
-                  className="text-sm text-gray-300 pl-4 border-l-2 border-amber-500/50"
+                  className="text-sm text-bone-200 pl-3 border-l-2 border-spark-amber/40"
                 >
                   {c}
                 </li>
@@ -503,56 +470,34 @@ function TradeResult({ data }: { data: TradeSuggestion }) {
         </div>
       </div>
 
-      {/* Risk Disclosure */}
-      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-5">
-        <h2 className="text-lg font-semibold text-amber-400 mb-2 flex items-center gap-2">
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          Risk Disclosure
+      {/* Risk disclosure */}
+      <div className="rounded-2xl border border-spark-amber/20 bg-spark-amber/[0.05] p-5">
+        <h2 className="text-base font-semibold text-spark-amber mb-2 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          Risk disclosure
         </h2>
-        <p className="text-amber-200/80">{explanation.risk_disclosure}</p>
+        <p className="text-sm text-spark-amber/85">
+          {explanation.risk_disclosure}
+        </p>
       </div>
 
       {/* Checklist */}
-      <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-5">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <svg
-            className="w-5 h-5 text-blue-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-            />
-          </svg>
-          Before You Trade - Checklist
+      <div className="glass rounded-2xl p-5">
+        <h2 className="text-base font-semibold text-bone-50 mb-4 flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-spark-cyan" />
+          Before you trade — checklist
         </h2>
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid md:grid-cols-2 gap-2">
           {explanation.human_checklist.map((item, i) => (
             <label
               key={i}
-              className="flex items-start gap-3 cursor-pointer group p-2 rounded hover:bg-[#1e222d] transition-colors"
+              className="flex items-start gap-3 cursor-pointer group p-2.5 rounded-lg hover:bg-white/[0.04] transition-colors"
             >
               <input
                 type="checkbox"
-                className="mt-1 h-4 w-4 rounded border-gray-600 bg-[#1e222d] text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                className="mt-0.5 h-4 w-4 rounded border-white/15 bg-white/[0.05] text-spark-violet focus:ring-spark-violet focus:ring-offset-0"
               />
-              <span className="text-sm text-gray-400 group-hover:text-gray-200 transition-colors">
+              <span className="text-sm text-bone-300 group-hover:text-bone-100 transition-colors">
                 {item}
               </span>
             </label>
@@ -560,13 +505,32 @@ function TradeResult({ data }: { data: TradeSuggestion }) {
         </div>
       </div>
 
-      {/* Confidence Statement */}
-      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-5">
-        <p className="text-sm text-blue-300">
-          <strong className="text-blue-400">Statistical Note:</strong>{' '}
+      {/* Confidence statement */}
+      <div className="rounded-2xl border border-spark-violet/20 bg-spark-violet/[0.05] p-5">
+        <p className="text-sm text-bone-200">
+          <strong className="text-spark-violet">Statistical note: </strong>
           {explanation.confidence_statement}
         </p>
       </div>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+  valueClass = 'text-bone-50',
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="flex justify-between items-center py-1.5 border-b border-white/[0.04] last:border-b-0">
+      <span className="text-bone-400 text-sm">{label}</span>
+      <span className={`font-semibold font-mono text-sm ${valueClass}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -575,8 +539,8 @@ export default function AnalyzePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0b0e11] flex items-center justify-center">
-          <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-spark-violet border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >

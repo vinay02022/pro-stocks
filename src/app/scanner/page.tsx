@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import TopNav from '@/components/TopNav';
+import { Search, Sparkles, ArrowRight } from 'lucide-react';
 
 interface PatternResult {
   type: string;
   signal: string;
   strength: string;
   score: number;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   entry_price?: number;
   stop_loss?: number;
   target?: number;
@@ -36,13 +38,13 @@ interface ScanResponse {
 }
 
 const PATTERNS = [
-  { id: 'all', name: 'All Patterns' },
+  { id: 'all', name: 'All' },
   { id: 'breakout', name: 'Breakout' },
   { id: 'momentum', name: 'Momentum' },
   { id: 'volume_spike', name: 'Volume Spike' },
-  { id: 'ema_crossover', name: 'EMA Crossover' },
+  { id: 'ema_crossover', name: 'EMA Cross' },
   { id: 'rsi_extreme', name: 'RSI Extreme' },
-  { id: 'macd_crossover', name: 'MACD Crossover' },
+  { id: 'macd_crossover', name: 'MACD Cross' },
   { id: 'sr_bounce', name: 'S/R Bounce' },
   { id: 'bb_squeeze', name: 'BB Squeeze' },
 ];
@@ -52,13 +54,24 @@ const TIMEFRAMES = [
   { value: '5m', label: '5m' },
   { value: '15m', label: '15m' },
   { value: '1h', label: '1H' },
-  { value: '1d', label: 'Daily' },
+  { value: '1d', label: 'D' },
+];
+
+const LOADING_STEPS = [
+  'Connecting to scanner engine…',
+  'Server is waking up (free tier)…',
+  'Pulling Nifty 50 candles…',
+  'Computing technical indicators…',
+  'Detecting patterns & breakouts…',
+  'Ranking opportunities…',
 ];
 
 export default function ScannerPage() {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [selectedPatterns, setSelectedPatterns] = useState<string[]>(['all']);
   const [timeframe, setTimeframe] = useState('1d');
@@ -73,6 +86,14 @@ export default function ScannerPage() {
   const runScan = async () => {
     setLoading(true);
     setError(null);
+    setLoadingStep(0);
+
+    if (stepTimer.current) {
+      clearInterval(stepTimer.current);
+    }
+    stepTimer.current = setInterval(() => {
+      setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
+    }, 5000);
 
     try {
       const patterns = selectedPatterns.includes('all')
@@ -86,7 +107,7 @@ export default function ScannerPage() {
 
       const res = await fetch(url);
       if (!res.ok) {
-        throw new Error('Scan failed');
+        throw new Error('Scan failed — the server may still be waking up.');
       }
 
       const data: ScanResponse = await res.json();
@@ -94,12 +115,21 @@ export default function ScannerPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Scan failed');
     } finally {
+      if (stepTimer.current) {
+        clearInterval(stepTimer.current);
+      }
       setLoading(false);
     }
   };
 
   useEffect(() => {
     runScan();
+    return () => {
+      if (stepTimer.current) {
+        clearInterval(stepTimer.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const togglePattern = (pattern: string) => {
@@ -130,385 +160,401 @@ export default function ScannerPage() {
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      setSortDirection((p) => (p === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortDirection('desc');
     }
   };
 
-  const getSignalColor = (signal: string) => {
-    switch (signal) {
-      case 'BULLISH':
-        return 'text-green-400 bg-green-500/20';
-      case 'BEARISH':
-        return 'text-red-400 bg-red-500/20';
-      default:
-        return 'text-gray-400 bg-gray-500/20';
+  const signalBadge = (signal: string) => {
+    if (signal === 'BULLISH') {
+      return 'text-spark-emerald bg-spark-emerald/10 border-spark-emerald/20';
     }
+    if (signal === 'BEARISH') {
+      return 'text-spark-rose bg-spark-rose/10 border-spark-rose/20';
+    }
+    return 'text-bone-400 bg-white/[0.04] border-white/[0.06]';
   };
 
-  const getStrengthColor = (strength: string) => {
-    switch (strength) {
-      case 'very_strong':
-        return 'text-green-400';
-      case 'strong':
-        return 'text-green-500';
-      case 'moderate':
-        return 'text-yellow-400';
-      default:
-        return 'text-gray-400';
+  const strengthColor = (strength: string) => {
+    if (strength === 'very_strong') {
+      return 'text-spark-emerald';
     }
+    if (strength === 'strong') {
+      return 'text-spark-cyan';
+    }
+    if (strength === 'moderate') {
+      return 'text-spark-amber';
+    }
+    return 'text-bone-400';
   };
 
   return (
-    <main className="min-h-screen bg-[#0b0e11]">
-      {/* Header */}
-      <div className="bg-[#131722] border-b border-[#2a2e39]">
-        <div className="max-w-[1800px] mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-xl font-bold text-white hover:text-blue-400 transition-colors flex items-center gap-2"
-              >
-                <svg
-                  className="w-8 h-8 text-blue-500"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                  />
-                </svg>
-                StockPro
-              </Link>
-              <span className="text-gray-500">|</span>
-              <h1 className="text-lg font-semibold text-white">
+    <>
+      <TopNav />
+      <main className="min-h-screen">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 py-6">
+          {/* Title */}
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-6 animate-fade-up">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-bone-400 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-spark-cyan" />
                 Market Scanner
+              </div>
+              <h1 className="text-3xl sm:text-4xl text-display font-semibold text-gradient">
+                High-conviction setups, ranked
               </h1>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/analyze"
-                className="px-4 py-2 text-sm text-gray-300 hover:text-white bg-[#1e222d] rounded-lg transition-colors"
-              >
-                Analyze
-              </Link>
-              <Link
-                href="/backtest"
-                className="px-4 py-2 text-sm text-gray-300 hover:text-white bg-[#1e222d] rounded-lg transition-colors"
-              >
-                Backtest
-              </Link>
-            </div>
+            <Link href="/analyze" className="btn-ghost text-sm">
+              Open Analyze
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-[1800px] mx-auto px-4 py-6">
-        {/* Filters */}
-        <div className="bg-[#131722] rounded-lg border border-[#2a2e39] p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Pattern Selector */}
-            <div className="flex-1">
-              <label className="text-xs text-gray-500 uppercase mb-2 block">
+          {/* Filters */}
+          <div className="glass rounded-2xl p-4 sm:p-5 mb-5 animate-fade-up">
+            {/* Pattern chips */}
+            <div className="mb-4">
+              <label className="text-[10px] uppercase tracking-[0.18em] text-bone-500 mb-2 block">
                 Patterns
               </label>
-              <div className="flex flex-wrap gap-2">
-                {PATTERNS.map((pattern) => (
-                  <button
-                    key={pattern.id}
-                    onClick={() => togglePattern(pattern.id)}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      selectedPatterns.includes(pattern.id)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-[#1e222d] text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {pattern.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-[#2a2e39]">
-            {/* Timeframe */}
-            <div>
-              <label className="text-xs text-gray-500 uppercase mb-2 block">
-                Timeframe
-              </label>
-              <div className="flex bg-[#1e222d] rounded-lg p-1">
-                {TIMEFRAMES.map((tf) => (
-                  <button
-                    key={tf.value}
-                    onClick={() => setTimeframe(tf.value)}
-                    className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                      timeframe === tf.value
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {tf.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Min Score */}
-            <div>
-              <label className="text-xs text-gray-500 uppercase mb-2 block">
-                Min Score
-              </label>
-              <input
-                type="number"
-                value={minScore}
-                onChange={(e) => setMinScore(Number(e.target.value))}
-                className="w-20 px-3 py-2 bg-[#1e222d] border border-[#2a2e39] rounded-lg text-white text-sm"
-                min={0}
-                max={100}
-              />
-            </div>
-
-            {/* Signal Filter */}
-            <div>
-              <label className="text-xs text-gray-500 uppercase mb-2 block">
-                Signal
-              </label>
-              <div className="flex bg-[#1e222d] rounded-lg p-1">
-                <button
-                  onClick={() => setSignalFilter(null)}
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    !signalFilter
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setSignalFilter('BULLISH')}
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    signalFilter === 'BULLISH'
-                      ? 'bg-green-600 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Bullish
-                </button>
-                <button
-                  onClick={() => setSignalFilter('BEARISH')}
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    signalFilter === 'BEARISH'
-                      ? 'bg-red-600 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Bearish
-                </button>
-              </div>
-            </div>
-
-            {/* Scan Button */}
-            <div className="ml-auto">
-              <label className="text-xs text-gray-500 uppercase mb-2 block">
-                &nbsp;
-              </label>
-              <button
-                onClick={runScan}
-                disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 transition-colors flex items-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                    Scan Now
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg mb-4 text-red-400">
-            {error}
-          </div>
-        )}
-
-        {/* Results */}
-        <div className="bg-[#131722] rounded-lg border border-[#2a2e39] overflow-hidden">
-          {/* Results Header */}
-          <div className="px-4 py-3 border-b border-[#2a2e39] flex items-center justify-between">
-            <span className="text-gray-400">
-              Found{' '}
-              <span className="text-white font-semibold">{results.length}</span>{' '}
-              stocks matching criteria
-            </span>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#1e222d]">
-                <tr>
-                  <th
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-white"
-                    onClick={() => handleSort('symbol')}
-                  >
-                    Symbol{' '}
-                    {sortField === 'symbol' &&
-                      (sortDirection === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Price
-                  </th>
-                  <th
-                    className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-white"
-                    onClick={() => handleSort('change')}
-                  >
-                    Change{' '}
-                    {sortField === 'change' &&
-                      (sortDirection === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                    Signal
-                  </th>
-                  <th
-                    className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-white"
-                    onClick={() => handleSort('score')}
-                  >
-                    Score{' '}
-                    {sortField === 'score' &&
-                      (sortDirection === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Patterns
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#2a2e39]">
-                {sortedResults.map((result) => (
-                  <tr
-                    key={result.symbol}
-                    className="hover:bg-[#1e222d] transition-colors"
-                  >
-                    <td className="px-4 py-4">
-                      <span className="font-semibold text-white">
-                        {result.symbol}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-right text-white font-mono">
-                      ₹{result.current_price.toFixed(2)}
-                    </td>
-                    <td
-                      className={`px-4 py-4 text-right font-mono ${
-                        result.day_change_percent >= 0
-                          ? 'text-green-400'
-                          : 'text-red-400'
+              <div className="flex flex-wrap gap-1.5">
+                {PATTERNS.map((p) => {
+                  const active = selectedPatterns.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => togglePattern(p.id)}
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-all duration-300 border ${
+                        active
+                          ? 'bg-spark-violet/15 text-bone-50 border-spark-violet/30 shadow-glow-violet'
+                          : 'bg-white/[0.03] text-bone-400 border-white/[0.06] hover:text-bone-100 hover:bg-white/[0.06]'
                       }`}
                     >
-                      {result.day_change_percent >= 0 ? '+' : ''}
-                      {result.day_change_percent.toFixed(2)}%
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${getSignalColor(result.dominant_signal)}`}
-                      >
-                        {result.dominant_signal}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-16 h-2 bg-[#1e222d] rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${result.dominant_signal === 'BULLISH' ? 'bg-green-500' : result.dominant_signal === 'BEARISH' ? 'bg-red-500' : 'bg-gray-500'}`}
-                            style={{
-                              width: `${Math.min(result.total_score, 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-white text-sm font-mono">
-                          {result.total_score.toFixed(0)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {result.patterns_found
-                          .slice(0, 3)
-                          .map((pattern, idx) => (
-                            <span
-                              key={idx}
-                              className={`px-2 py-0.5 rounded text-xs ${getStrengthColor(pattern.strength)} bg-[#1e222d]`}
-                              title={`Score: ${pattern.score}`}
-                            >
-                              {pattern.type.replace('_', ' ')}
-                            </span>
-                          ))}
-                        {result.patterns_found.length > 3 && (
-                          <span className="px-2 py-0.5 rounded text-xs text-gray-500 bg-[#1e222d]">
-                            +{result.patterns_found.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Link
-                          href={`/analyze?symbol=${result.symbol}`}
-                          className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                        >
-                          Analyze
-                        </Link>
-                        <Link
-                          href={`/chart/${result.symbol}`}
-                          className="px-3 py-1 text-xs bg-[#1e222d] text-gray-300 rounded hover:text-white transition-colors"
-                        >
-                          Chart
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {results.length === 0 && !loading && (
-              <div className="text-center py-12 text-gray-500">
-                No stocks found matching the criteria. Try adjusting filters.
+                      {p.name}
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </div>
+
+            <div className="flex flex-wrap items-end gap-4 pt-4 border-t border-white/[0.05]">
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-bone-500 mb-2 block">
+                  Timeframe
+                </label>
+                <div className="flex bg-white/[0.03] border border-white/[0.06] rounded-xl p-1">
+                  {TIMEFRAMES.map((tf) => (
+                    <button
+                      key={tf.value}
+                      onClick={() => setTimeframe(tf.value)}
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                        timeframe === tf.value
+                          ? 'bg-white/[0.08] text-bone-50'
+                          : 'text-bone-400 hover:text-bone-100'
+                      }`}
+                    >
+                      {tf.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-bone-500 mb-2 block">
+                  Min score
+                </label>
+                <input
+                  type="number"
+                  value={minScore}
+                  onChange={(e) => setMinScore(Number(e.target.value))}
+                  className="w-20 px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-xl text-bone-50 text-sm focus:bg-white/[0.05] focus:border-white/[0.16] outline-none"
+                  min={0}
+                  max={100}
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-[0.18em] text-bone-500 mb-2 block">
+                  Signal
+                </label>
+                <div className="flex bg-white/[0.03] border border-white/[0.06] rounded-xl p-1">
+                  <button
+                    onClick={() => setSignalFilter(null)}
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                      !signalFilter
+                        ? 'bg-white/[0.08] text-bone-50'
+                        : 'text-bone-400 hover:text-bone-100'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setSignalFilter('BULLISH')}
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                      signalFilter === 'BULLISH'
+                        ? 'bg-spark-emerald/20 text-spark-emerald'
+                        : 'text-bone-400 hover:text-bone-100'
+                    }`}
+                  >
+                    Bullish
+                  </button>
+                  <button
+                    onClick={() => setSignalFilter('BEARISH')}
+                    className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
+                      signalFilter === 'BEARISH'
+                        ? 'bg-spark-rose/20 text-spark-rose'
+                        : 'text-bone-400 hover:text-bone-100'
+                    }`}
+                  >
+                    Bearish
+                  </button>
+                </div>
+              </div>
+
+              <div className="ml-auto">
+                <button
+                  onClick={runScan}
+                  disabled={loading}
+                  className="btn-accent text-sm"
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
+                      Scanning…
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4" />
+                      Scan Now
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Cold-start banner */}
+          {loading && (
+            <div className="glass rounded-2xl p-4 mb-5 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="relative w-9 h-9 flex-shrink-0">
+                  <div className="absolute inset-0 rounded-full border-2 border-white/10" />
+                  <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-spark-cyan border-r-spark-violet animate-spin" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-bone-100 text-sm font-medium">
+                    {LOADING_STEPS[loadingStep]}
+                  </p>
+                  <p className="text-xs text-bone-500 mt-0.5">
+                    First request after idle can take 30–60 seconds.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && !loading && (
+            <div className="rounded-2xl border border-spark-rose/25 bg-spark-rose/[0.06] p-4 mb-5 text-sm text-spark-rose animate-fade-in">
+              {error}
+            </div>
+          )}
+
+          {/* Results table */}
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-white/[0.05] flex items-center justify-between">
+              <span className="text-sm text-bone-400">
+                <span className="text-bone-50 font-semibold font-mono">
+                  {results.length}
+                </span>{' '}
+                matching stocks
+              </span>
+              {!loading && results.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-xs text-bone-500">
+                  <span className="dot-spark bg-spark-emerald" />
+                  Updated
+                </span>
+              )}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-white/[0.02]">
+                  <tr>
+                    <th
+                      className="px-4 py-3 text-left text-[10px] font-semibold tracking-[0.16em] text-bone-500 uppercase cursor-pointer hover:text-bone-200"
+                      onClick={() => handleSort('symbol')}
+                    >
+                      Symbol{' '}
+                      {sortField === 'symbol' &&
+                        (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th className="px-4 py-3 text-right text-[10px] font-semibold tracking-[0.16em] text-bone-500 uppercase">
+                      Price
+                    </th>
+                    <th
+                      className="px-4 py-3 text-right text-[10px] font-semibold tracking-[0.16em] text-bone-500 uppercase cursor-pointer hover:text-bone-200"
+                      onClick={() => handleSort('change')}
+                    >
+                      Change{' '}
+                      {sortField === 'change' &&
+                        (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th className="px-4 py-3 text-center text-[10px] font-semibold tracking-[0.16em] text-bone-500 uppercase">
+                      Signal
+                    </th>
+                    <th
+                      className="px-4 py-3 text-center text-[10px] font-semibold tracking-[0.16em] text-bone-500 uppercase cursor-pointer hover:text-bone-200"
+                      onClick={() => handleSort('score')}
+                    >
+                      Score{' '}
+                      {sortField === 'score' &&
+                        (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-[10px] font-semibold tracking-[0.16em] text-bone-500 uppercase">
+                      Patterns
+                    </th>
+                    <th className="px-4 py-3 text-center text-[10px] font-semibold tracking-[0.16em] text-bone-500 uppercase">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {loading &&
+                    results.length === 0 &&
+                    Array.from({ length: 8 }).map((_, i) => (
+                      <tr key={`s-${i}`}>
+                        {Array.from({ length: 7 }).map((__, j) => (
+                          <td key={j} className="px-4 py-4">
+                            <div
+                              className="h-4 rounded skeleton"
+                              style={{
+                                animationDelay: `${(i + j) * 60}ms`,
+                                width:
+                                  j === 5 ? '80%' : j === 0 ? '70%' : '60%',
+                              }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+
+                  {sortedResults.map((result, i) => (
+                    <tr
+                      key={result.symbol}
+                      className="hover:bg-white/[0.025] transition-colors animate-fade-in"
+                      style={{ animationDelay: `${Math.min(i * 30, 600)}ms` }}
+                    >
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`dot-spark ${
+                              result.dominant_signal === 'BULLISH'
+                                ? 'bg-spark-emerald'
+                                : result.dominant_signal === 'BEARISH'
+                                  ? 'bg-spark-rose'
+                                  : 'bg-bone-400'
+                            }`}
+                          />
+                          <span className="font-semibold text-bone-50">
+                            {result.symbol}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-right text-bone-100 font-mono text-sm">
+                        ₹{result.current_price.toFixed(2)}
+                      </td>
+                      <td
+                        className={`px-4 py-4 text-right font-mono text-sm ${
+                          result.day_change_percent >= 0
+                            ? 'text-spark-emerald'
+                            : 'text-spark-rose'
+                        }`}
+                      >
+                        {result.day_change_percent >= 0 ? '+' : ''}
+                        {result.day_change_percent.toFixed(2)}%
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <span
+                          className={`px-2 py-1 rounded-md text-[10px] font-semibold tracking-wider border ${signalBadge(result.dominant_signal)}`}
+                        >
+                          {result.dominant_signal}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-16 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                result.dominant_signal === 'BULLISH'
+                                  ? 'bg-gradient-to-r from-spark-emerald to-spark-cyan'
+                                  : result.dominant_signal === 'BEARISH'
+                                    ? 'bg-gradient-to-r from-spark-rose to-spark-amber'
+                                    : 'bg-bone-400'
+                              }`}
+                              style={{
+                                width: `${Math.min(result.total_score, 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-bone-100 text-sm font-mono">
+                            {result.total_score.toFixed(0)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {result.patterns_found
+                            .slice(0, 3)
+                            .map((pattern, idx) => (
+                              <span
+                                key={idx}
+                                className={`px-2 py-0.5 rounded-md text-[10px] ${strengthColor(pattern.strength)} bg-white/[0.04] border border-white/[0.06]`}
+                                title={`Score: ${pattern.score}`}
+                              >
+                                {pattern.type.replace('_', ' ')}
+                              </span>
+                            ))}
+                          {result.patterns_found.length > 3 && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] text-bone-500 bg-white/[0.04] border border-white/[0.06]">
+                              +{result.patterns_found.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Link
+                            href={`/analyze?symbol=${result.symbol}`}
+                            className="px-3 py-1 text-xs bg-white/[0.06] border border-white/[0.08] text-bone-100 rounded-lg hover:bg-spark-violet/15 hover:border-spark-violet/30 transition-all"
+                          >
+                            Analyze
+                          </Link>
+                          <Link
+                            href={`/chart/${result.symbol}`}
+                            className="px-3 py-1 text-xs bg-white/[0.03] border border-white/[0.06] text-bone-400 rounded-lg hover:text-bone-100 transition-all"
+                          >
+                            Chart
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {results.length === 0 && !loading && (
+                <div className="text-center py-12 text-bone-500 text-sm">
+                  No stocks matched your filters. Try lowering the min score or
+                  selecting more patterns.
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

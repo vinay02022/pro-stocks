@@ -98,9 +98,9 @@ export default function StockSearch({
 
   return (
     <div className="relative">
-      <div className="relative">
+      <div className="relative group">
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-bone-500 group-focus-within:text-spark-violet transition-colors"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -120,11 +120,11 @@ export default function StockSearch({
           onFocus={() => query.length > 0 && setShowDropdown(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-2.5 border border-[#2a2e39] rounded-lg bg-[#1e222d] text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          className="w-full pl-12 pr-11 py-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-bone-50 placeholder-bone-500 focus:bg-white/[0.05] focus:border-white/[0.16] outline-none transition-all shadow-inner-light"
         />
         {isLoading && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-spark-violet border-t-transparent rounded-full animate-spin" />
           </div>
         )}
         {!isLoading && query && (
@@ -133,7 +133,8 @@ export default function StockSearch({
               setQuery('');
               setResults([]);
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-bone-500 hover:text-bone-200 transition-colors"
+            aria-label="Clear search"
           >
             <svg
               className="w-4 h-4"
@@ -155,35 +156,35 @@ export default function StockSearch({
       {showDropdown && results.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-2 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-2xl max-h-80 overflow-y-auto"
+          className="absolute z-50 w-full mt-2 glass-strong rounded-2xl shadow-2xl max-h-80 overflow-y-auto animate-fade-in"
         >
           {results.map((stock, index) => (
             <button
               key={stock.symbol}
               onClick={() => handleSelect(stock)}
-              className={`w-full px-4 py-3 text-left border-b border-[#2a2e39] last:border-b-0 transition-colors ${
+              className={`w-full px-4 py-3 text-left border-b border-white/[0.04] last:border-b-0 transition-colors ${
                 index === selectedIndex
-                  ? 'bg-blue-600/20'
-                  : 'hover:bg-[#2a2e39]'
+                  ? 'bg-spark-violet/10'
+                  : 'hover:bg-white/[0.04]'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#131722] border border-[#2a2e39] flex items-center justify-center">
-                    <span className="text-xs font-bold text-gray-400">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-bone-300">
                       {stock.symbol.slice(0, 2)}
                     </span>
                   </div>
-                  <div>
-                    <span className="font-semibold text-white block">
+                  <div className="min-w-0">
+                    <span className="font-semibold text-bone-50 block">
                       {stock.symbol}
                     </span>
-                    <p className="text-sm text-gray-500 truncate max-w-[200px]">
+                    <p className="text-sm text-bone-400 truncate max-w-[220px]">
                       {stock.name}
                     </p>
                   </div>
                 </div>
-                <span className="text-xs px-2 py-1 bg-[#131722] text-gray-400 rounded border border-[#2a2e39]">
+                <span className="text-[10px] uppercase tracking-wider px-2 py-1 bg-white/[0.04] text-bone-400 rounded-md border border-white/[0.06] flex-shrink-0">
                   {stock.sector}
                 </span>
               </div>
@@ -196,9 +197,9 @@ export default function StockSearch({
         query.length > 0 &&
         results.length === 0 &&
         !isLoading && (
-          <div className="absolute z-50 w-full mt-2 bg-[#1e222d] border border-[#2a2e39] rounded-lg shadow-2xl p-6 text-center">
+          <div className="absolute z-50 w-full mt-2 glass-strong rounded-2xl p-6 text-center animate-fade-in">
             <svg
-              className="w-10 h-10 text-gray-600 mx-auto mb-2"
+              className="w-10 h-10 text-bone-500 mx-auto mb-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -210,12 +211,12 @@ export default function StockSearch({
                 d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-gray-500">
+            <p className="text-bone-400">
               No stocks found for &ldquo;
-              <span className="text-gray-300">{query}</span>&rdquo;
+              <span className="text-bone-200">{query}</span>&rdquo;
             </p>
-            <p className="text-xs text-gray-600 mt-1">
-              Try searching for TCS, RELIANCE, INFY, etc.
+            <p className="text-xs text-bone-500 mt-1">
+              Try searching for TCS, RELIANCE, INFY…
             </p>
           </div>
         )}
